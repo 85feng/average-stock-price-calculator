@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="index, follow">
+<meta name="googlebot" content="index, follow">
+<meta name="bingbot" content="index, follow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Average Price Calculator | Share Price Average Calculator</title>
+<meta name="description" content="Stock average calculator calculate the average share price you paid for a stock and determine your cost whether you average up or average down on a position.">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Modernized styles (self-contained) -->
+<style>
+  :root{
+    --bg1:#f3f6fb;
+    --bg2:#eef4f9;
+    --muted:#6b7280;
+    --accent:#0ea5a4;
+    --accent-2:#2563eb;
+    --card:#ffffff;
+    --radius:12px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(180deg,var(--bg1),var(--bg2));
+    color:#111827;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    line-height:1.45;
+  }
+
+  /* Header */
+  header#header{
+    position:sticky;
+    top:0;
+    z-index:1200;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 20px;
+    background: linear-gradient(90deg, rgba(6,78,59,0.95), rgba(0,128,128,0.95));
+    color:#fff;
+    box-shadow: 0 6px 20px rgba(2,6,23,0.12);
+  }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo h1{ font-size:18px; margin:0; font-family: "Times New Roman", Times, serif; letter-spacing:0.2px; }
+  .menu { display:flex; gap:12px; align-items:center; }
+  .menu a { color:rgba(255,255,255,0.95); text-decoration:none; padding:6px 8px; border-radius:8px; font-size:14px; }
+  .menu a:hover{ background: rgba(255,255,255,0.06); }
+
+  /* mobile menu icon */
+  .menu-icon{ display:none; cursor:pointer; width:46px; height:46px; align-items:center; justify-content:center; border-radius:8px; }
+  .menu-icon span{ display:block; width:20px; height:2px; background:#fff; margin:3px 0; transition:all .2s }
+
+  main{
+    max-width:1200px;
+    margin:28px auto;
+    padding:0 20px 60px;
+  }
+
+  .calculation{ margin-bottom:18px; }
+  .page-title { text-align:center; margin:6px 0 18px; font-size:20px; color:#0f172a; }
+
+  .mycontainer {
+    display:flex;
+    gap:24px;
+    align-items:flex-start;
+    width:100%;
+  }
+
+  /* Left column: calculator */
+  .calculator {
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:18px;
+    box-shadow: 0 6px 20px rgba(15,23,42,0.06);
+    flex:0 0 420px;
+    min-width:280px;
+    position:sticky;
+    top:92px;
+    height:fit-content;
+  }
+  .calculator h3{ margin-top:0; font-size:16px; color:#0f172a; }
+  .stock { background: #fff; border-radius:10px; padding:12px; margin:10px 0; box-shadow: 0 3px 10px rgba(2,6,23,0.03); }
+  .stock table{ width:100%; border-collapse:collapse; }
+  .stock td{ padding:8px 10px; vertical-align:middle; }
+  label{ display:block; font-size:14px; color:var(--muted); }
+  input[type="number"]{
+    width:100%;
+    padding:10px 8px;
+    border:1px solid #e6e9ee;
+    border-radius:8px;
+    font-size:15px;
+    background:#fafbfd;
+    text-align:center;
+  }
+  .close small { cursor:pointer; color:#ef4444; font-weight:600; }
+  .addnew{ display:flex; justify-content:flex-end; margin-top:8px; }
+  #addnew{ background:linear-gradient(180deg,var(--accent),#047c77); color:#fff; padding:8px 14px; border:none; border-radius:8px; cursor:pointer; }
+
+  .current-price{ margin:12px 0; display:flex; gap:8px; align-items:center; justify-content:center; }
+  .calculate{ display:flex; justify-content:center; margin-top:12px; }
+  #calculate{ padding:12px 36px; background:linear-gradient(180deg,var(--accent-2),#1e40af); color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:700; letter-spacing:0.6px; }
+
+  /* Right column: results */
+  .results-section{ flex:1; min-width:0; display:flex; flex-direction:column; gap:18px; }
+  .additional-results, .transaction-container, .chart-container { background:var(--card); border-radius:var(--radius); padding:18px; box-shadow: 0 6px 20px rgba(15,23,42,0.06); }
+
+  .result-grid{ display:grid; gap:16px; grid-template-columns: repeat(3, 1fr); }
+  .result-card{ background:#f8fafc; border-radius:12px; padding:14px; border:1px solid #e6eef6; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+  .result-label{ font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0.6px; }
+  .resultdata{ font-size:20px; font-weight:700; color:#0f172a; }
+
+  #profitLoss.profit, #profitLossPercentage.profit, .resultdata.positive{ color:#16a34a; }
+  #profitLoss.loss, #profitLossPercentage.loss, .resultdata.negative{ color:#ef4444; }
+
+  .transaction-table{ width:100%; border-collapse:collapse; margin-top:12px; min-width:320px; }
+  .transaction-table th, .transaction-table td{ padding:10px 8px; border-bottom:1px solid #edf2f7; text-align:center; font-size:14px; }
+  .transaction-table th{ background:#f8fafc; color:#1f2937; font-weight:700; }
+  .button-container{ display:flex; gap:10px; margin-top:12px; justify-content:flex-end; }
+  .button-container button{ padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+  #printSummary{ background:linear-gradient(180deg,#10b981,#059669); color:#fff; }
+  #clearAll{ background:linear-gradient(180deg,#ef4444,#c02616); color:#fff; }
+
+  .chart-wrapper{ height:260px; display:block; width:100%; }
+
+  /* Content / article (long text) */
+  .content{ margin-top:12px; background:var(--card); border-radius:12px; padding:18px; box-shadow:0 6px 20px rgba(2,6,23,0.04); color:#0f172a; }
+  .content h1, .content h2, .content h3{ color:#0b1220; }
+  .content p{ margin:10px 0; color:#333; }
+
+  /* Footer */
+  footer{ margin-top:28px; padding:18px; background: linear-gradient(90deg,#0b5257,#046b63); color:#fff; border-radius:10px; text-align:center; }
+
+  /* Back to top */
+  #top{ display:none; position:fixed; right:24px; bottom:24px; z-index:1500; background:linear-gradient(180deg,var(--accent-2),#0369a1); color:#fff; border:none; width:48px; height:48px; border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,0.18); cursor:pointer; font-size:20px; }
+
+  /* Responsive */
+  @media (max-width: 1000px){
+    .mycontainer{ flex-direction:column; }
+    .calculator{ position:relative; top:auto; width:100%; }
+    .result-grid{ grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px){
+    header#header{ padding:10px; }
+    .menu{ display:none; }
+    .menu-icon{ display:flex; }
+    .result-grid{ grid-template-columns: 1fr; }
+    .transaction-table th, .transaction-table td{ font-size:12px; padding:8px; }
+    .chart-wrapper { height:200px; }
+  }
+
+  /* Print-friendly small tweaks */
+  @media print{
+    header, #top, .menu-icon, .addnew, #addnew, #calculate, #printSummary, #clearAll { display:none !important; }
+    body{ background:#fff; }
+  }
+</style>
+</head>
+<body>
+
+<header id="header">
+  <div id="menuIcon" class="menu-icon" onclick="menuicon()">
+    <span></span><span></span><span></span>
+  </div>
+
+  <div class="logo">
+    <a href="https://www.stockspriceaveragecalculator.com/" style="color:inherit; text-decoration:none;">
+      <h1>Stocks Average Calculator</h1>
+    </a>
+  </div>
+
+  <div id="menu" class="menu">
+    <a href="https://www.stockspriceaveragecalculator.com/">Home</a>
+    <a href="privacy.html">Privacy policy</a>
+    <a href="disclaimer.html">Disclaimer</a>
+    <a href="contact.html">Contact us</a>
+  </div>
+</header>
+
+<main>
+  <section class="calculation">
+    <div class="page-title">
+      <h2>Stocks Price Average Calculator | Price Average Down Calculator</h2>
+    </div>
+
+    <div class="mycontainer">
+      <!-- Calculator Column -->
+      <div class="calculator" aria-label="Calculator card">
+        <h3>Stocks Average Calculator</h3>
+
+        <!-- stock inputs -->
+        <div class="stock">
+          <table>
+            <tbody>
+              <tr>
+                <td><label for="number1">Number of Stocks</label></td>
+                <td><input type="number" pattern="\d*" name="stock" id="number1" onclick="this.select()"></td>
+              </tr>
+              <tr>
+                <td><label for="price1">Buy Price</label></td>
+                <td><input type="number" name="price" id="price1" onclick="this.select()"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="stock">
+          <table>
+            <tbody>
+              <tr>
+                <td><label for="number2">Number of Stocks</label></td>
+                <td><input type="number" pattern="\d*" name="stock" id="number2" onclick="this.select()"></td>
+              </tr>
+              <tr>
+                <td><label for="price2">Buy Price</label></td>
+                <td><input type="number" name="price" id="price2" onclick="this.select()"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- dynamically shown stock sections (3-10) -->
+        <div class="stock" id="stock3" style="display:none;">
+          <div class="close"><small onclick="close3()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number3">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number3" onclick="this.select()"></td></tr>
+            <tr><td><label for="price3">Buy Price</label></td><td><input type="number" name="price" id="price3" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="stock" id="stock4" style="display:none;">
+          <div class="close"><small onclick="close4()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number4">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number4" onclick="this.select()"></td></tr>
+            <tr><td><label for="price4">Buy Price</label></td><td><input type="number" name="price" id="price4" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="stock" id="stock5" style="display:none;">
+          <div class="close"><small onclick="close5()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number5">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number5" onclick="this.select()"></td></tr>
+            <tr><td><label for="price5">Buy Price</label></td><td><input type="number" name="price" id="price5" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="stock" id="stock6" style="display:none;">
+          <div class="close"><small onclick="close6()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number6">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number6" onclick="this.select()"></td></tr>
+            <tr><td><label for="price6">Buy Price</label></td><td><input type="number" name="price" id="price6" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="stock" id="stock7" style="display:none;">
+          <div class="close"><small onclick="close7()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number7">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number7" onclick="this.select()"></td></tr>
+            <tr><td><label for="price7">Buy Price</label></td><td><input type="number" name="price" id="price7" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="stock" id="stock8" style="display:none;">
+          <div class="close"><small onclick="close8()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number8">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number8" onclick="this.select()"></td></tr>
+            <tr><td><label for="price8">Buy Price</label></td><td><input type="number" name="price" id="price8" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="stock" id="stock9" style="display:none;">
+          <div class="close"><small onclick="close9()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number9">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number9" onclick="this.select()"></td></tr>
+            <tr><td><label for="price9">Buy Price</label></td><td><input type="number" name="price" id="price9" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="stock" id="stock10" style="display:none;">
+          <div class="close"><small onclick="close10()">Close[X]</small></div>
+          <table><tbody>
+            <tr><td><label for="number10">Number of Stocks</label></td><td><input type="number" pattern="\d*" name="stock" id="number10" onclick="this.select()"></td></tr>
+            <tr><td><label for="price10">Buy Price</label></td><td><input type="number" name="price" id="price10" onclick="this.select()"></td></tr>
+          </tbody></table>
+        </div>
+
+        <div class="addnew">
+          <button id="addnew" onclick="addmore()">Add More</button>
+        </div>
+
+        <div class="current-price">
+          <label for="currentPrice" style="margin-right:8px;">Current Market Price:</label>
+          <input type="number" id="currentPrice" name="currentPrice" style="max-width:150px;">
+        </div>
+
+        <div class="calculate">
+          <button type="submit" id="calculate" onclick="calculate()">CALCULATE</button>
+        </div>
+
+        <div class="result" id="resultbox" style="display:none; margin-top:12px;">
+          <h3>Stock Average Calculator Results</h3>
+          <hr>
+        </div>
+      </div>
+
+      <!-- Results Column -->
+      <div class="results-section">
+        <div class="additional-results" id="transactionSummary">
+          <h4>Investment Summary</h4>
+          <div class="result-grid">
+            <div class="result-card">
+              <div class="result-label">Total Shares</div>
+              <div class="resultdata" id="totalShares">#</div>
+            </div>
+            <div class="result-card">
+              <div class="result-label">Average Price</div>
+              <div class="resultdata" id="avgPrice">#</div>
+            </div>
+            <div class="result-card">
+              <div class="result-label">Total Investment</div>
+              <div class="resultdata" id="totalInvestment">#</div>
+            </div>
+            <div class="result-card" id="profitLossCard" style="display:none;">
+              <div class="result-label">Profit/Loss</div>
+              <div class="resultdata" id="profitLoss">#</div>
+            </div>
+            <div class="result-card" id="profitLossPercentageCard" style="display:none;">
+              <div class="result-label">Profit/Loss %</div>
+              <div class="resultdata" id="profitLossPercentage">#</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="transaction-container">
+          <h4>Transaction Details</h4>
+          <div class="table-responsive">
+            <table class="transaction-table">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Shares</th>
+                  <th>Price</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody id="transactionBody"></tbody>
+            </table>
+          </div>
+
+          <div class="button-container">
+            <button id="printSummary" onclick="printSummary()">Print Summary</button>
+            <button id="clearAll" onclick="clearAll()">Clear All</button>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <h3>Purchase History</h3>
+          <div class="chart-wrapper">
+            <canvas id="purchaseChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- long article/content (preserved original text) -->
+    <div class="content" style="margin-top:18px;">
+      <article>
+        <span id="formula"></span>
+
+        <p>
+There is a lot of talk about the stock market, and one term you may have heard is "averaging." What does this mean, and what impact does it have on your investments? This article will discuss averaging in the stock market and how it can affect your portfolio. We will also provide some tips on how to use averaging to your advantage when investing in stocks.
+        </p>
+
+        <h1>What Is Averaging?</h1>
+        <p>
+Averaging is a way of buying stocks at different prices in order to reduce the risk associated with investing. Generally, you pay one price for each share when you buy stocks. With averaging, however, you buy multiple shares at different prices over time. By doing this, your average cost per share will be lower than if you had bought all the shares at once.
+        </p>
+
+
+
+<h3>How to Use Online Stock Average Calculator?</h3>
+<p>To effectively use an online stock average calculator, the process is designed to be straightforward and intuitive, guiding you through a few simple steps to gain clarity on your stock investments.</p>
+<p>Here's a step-by-step guide on <strong>How to Use an Online Stock Average Calculator</strong>:</p>
+<ol>
+    <li><strong>Input Purchase Details:</strong>
+        <ul>
+            <li>The first step involves entering the specifics of each stock purchase you've made for a particular company.</li>
+            <li>For each transaction, you'll typically find fields to input the <strong>Price Per Share</strong> (the price at which you bought the stock) and the <strong>Quantity</strong> (the number of shares acquired at that price).</li>
+            <li>Most calculators provide an <strong>"Add More"</strong> or <strong>"Add Holding"</strong> button, allowing you to input details for multiple transactions if you've bought the same stock at different times and prices.</li>
+        </ul>
+    </li>
+    <li><strong>Enter Current Market Price (Optional but Recommended):</strong>
+        <ul>
+            <li>Many advanced calculators will also ask for the <strong>Current Market Price per Share</strong> of the stock.</li>
+            <li>This input is crucial for the calculator to determine your current <strong>Profit/Loss</strong> and the <strong>Total Market Value</strong> of your holdings.</li>
+            <li>Some tools even offer the convenience of fetching the current market price automatically by entering the stock symbol (e.g., AAPL).</li>
+        </ul>
+    </li>
+    <li><strong>Initiate Calculation:</strong>
+        <ul>
+            <li>Once all your purchase details and the current market price (if applicable) are entered, simply click the <strong>"Calculate"</strong> or <strong>"Calculate Average"</strong> button.</li>
+            <li>The calculator then automatically applies the weighted average formula to compute your average stock price.</li>
+        </ul>
+    </li>
+    <li><strong>Interpret the Output:</strong>
+        <ul>
+            <li>After calculation, the tool will display key results, typically including:
+                <ul>
+                    <li><strong>Average Price Per Share:</strong> This is the weighted average price you've paid across all your purchases.</li>
+                    <li><strong>Total Quantity/Shares:</strong> The total number of shares you own.</li>
+                    <li><strong>Total Investment Cost:</strong> The total amount of money you've invested in that stock.</li>
+                    <li><strong>Current Market Value:</strong> The current total value of your shares based on the market price.</li>
+                    <li><strong>Profit/Loss:</strong> Your current gain or loss on the investment.</li>
+                    <li>Some calculators may also provide a detailed "Transaction Details" summary.</li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li><strong>Utilize Additional Features & Tips:</strong>
+        <ul>
+            <li><strong>Hypothetical Scenarios:</strong> Some calculators allow you to perform calculations even if you don't own the shares, which is excellent for pre-purchase due diligence and planning "averaging down" or "averaging up" strategies.</li>
+            <li><strong>Clear & Reset:</strong> Look for "Clear All" or "Reset" buttons to easily start a new calculation.</li>
+            <li><strong>Print Summary:</strong> Some tools offer a "Print Summary" option for record-keeping.</li>
+            <li><strong>Regular Updates:</strong> To get the most accurate picture, regularly update the calculator with your latest transactions.</li>
+            <li><strong>Combine with Other Tools:</strong> Use the stock average calculator alongside other investment tools for comprehensive portfolio management.</li>
+        </ul>
+    </li>
+</ol>
+<p>By following these steps, an online stock average calculator becomes an invaluable instrument for informed decision-making and effective portfolio management, saving you time and effort compared to manual calculations.</p>
+
+ <h3>How to calculate average stock price</h3>
+<p>Calculating the <strong>average stock price</strong> is a fundamental step for investors who have made multiple purchases of the same stock at varying prices. This process involves determining the weighted average price, which takes into account both the price paid per share and the quantity of shares acquired in each transaction. Instead of manually summing up all costs and dividing by total shares, a reliable <strong>stock average calculator</strong> streamlines this complex process, providing an accurate average price per share automatically. This helps investors understand the true cost basis of their investments and make informed decisions about buying, selling, or holding stocks.</p>
+
+<h3>Formula for average stock price</h3>
+<p>The <strong>formula for average stock price</strong> is based on a weighted average, ensuring that the quantity of shares bought at each price point is given appropriate importance. The core formula is: <strong>Average Price = (Total Investment Cost) / (Total Number of Shares)</strong>. To break it down further: Total Investment Cost is the sum of (Price per share × Number of shares) for each purchase, and Total Number of Shares is the sum of all shares bought across all purchases. Our <strong>stock average calculator</strong> automates this formula, removing the guesswork and allowing you to track your investment with precision.</p>
+
+<h3>What is averaging in stock market</h3>
+<p><strong>Averaging in the stock market</strong> is a strategic technique where an investor buys a fixed quantity or amount of a given stock at regular intervals, regardless of its current price. The primary goal of this investment strategy is to reduce the impact of market fluctuations on your overall investment and potentially lower your average cost per share over time. By consistently investing, you buy more shares when prices are low and fewer when prices are high, ultimately smoothing out your cost basis. This disciplined approach helps manage risk and is particularly favored by long-term investors.</p>
+
+<h3>Averaging up strategy</h3>
+<p><strong>Averaging up</strong> is an investment strategy that involves purchasing additional shares of a stock as its price increases. While this action will raise your overall average cost per share, it is typically employed when an investor is following a trend-based strategy and believes the stock is on a strong upward momentum. The aim is to strengthen your position in a rising stock, allowing you to amplify gains in bullish market trends. However, caution is advised to avoid buying at inflated prices, and it's important to set limits to prevent overexposure, as even strong stocks can experience corrections.</p>
+
+<h3>Averaging down strategy</h3>
+<p><strong>Averaging down</strong> is a common investment strategy where an investor buys more shares of a stock when its price falls, thereby reducing their overall average cost per share. This technique is often used by investors who have strong conviction in a company's long-term fundamentals, believing that the stock's current lower price represents an attractive valuation. The goal is to accumulate more shares at a progressively better price, which can increase profit potential if the stock price eventually recovers. While it can improve your overall position, it also increases your exposure to that particular stock.</p>
+
+<h3>When to average down stocks</h3>
+<p>Deciding <strong>when to average down stocks</strong> requires careful consideration. This strategy is most suitable when you firmly believe in the company's long-term fundamentals, meaning its earnings, business model, and future prospects remain strong despite short-term price drops. It's also ideal for long-term investors who are comfortable with market volatility and can withstand temporary declines without panicking. However, you should <strong>avoid averaging down</strong> if the stock is falling due to weak fundamentals (e.g., declining revenues, rising debt) or if it's a speculative or penny stock without a solid earnings record, as this could lead to significant and permanent losses. It's crucial to evaluate the reasons behind the price decline before buying more.</p>
+
+<h3>How to calculate cost basis</h3>
+<p><strong>Cost basis</strong> is the total amount you pay to acquire a security, and it's a crucial concept for every investor to understand. It includes the actual price of the security plus adjustments for broker commissions, fees, and other items that may affect your investment. Knowing your cost basis is essential for federal tax purposes, as it's used to calculate your capital gain or loss when you sell the security. While determining cost basis can be straightforward for a single purchase, it becomes more complex with multiple purchases at varying prices. Our <strong>stock average calculator</strong> helps you determine the average cost per share, which is a key component in calculating your overall cost basis.</p>
+
+<h3>What is average cost in stocks</h3>
+<p>The <strong>average cost in stocks</strong> refers to the mean price an investor has paid for all shares of a particular stock, especially when those shares were acquired through multiple transactions at different prices. It provides a representative figure for your investment's true cost, considering both the price and quantity of shares bought in each transaction. Understanding your average cost is vital for evaluating investment performance, assessing profitability, and making informed decisions about future buying, selling, or holding strategies. It helps you gauge your exposure to market volatility and manage your portfolio effectively.</p>
+
+<h3>How to lower average stock price</h3>
+<p>The primary goal of the <strong>averaging down</strong> strategy is to <strong>lower your average stock price</strong>. This is achieved by strategically purchasing a greater number of shares at a reduced price when the stock's value has fallen. By doing so, you decrease your overall cost per share, which can potentially increase your profit margin if the stock price recovers in the future. However, it's important to remember that while this strategy lowers your average purchase price, it does not reduce any existing loss on your original shares; it only changes the average.</p>
+
+<h3>Average share price formula example</h3>
+<p>To illustrate the <strong>average share price formula</strong>, let's consider a practical example. Suppose you made two purchases of Company X stock:</p>
+<ol>
+<li>You bought <strong>50 shares</strong> at <strong>$200 per share</strong>. (Cost: 50 × $200 = $10,000)</li>
+<li>Later, you bought <strong>100 shares</strong> at <strong>$150 per share</strong>. (Cost: 100 × $150 = $15,000)</li>
+</ol>
+<p>Using the formula: <strong>Average Price = (Total Investment Cost) / (Total Number of Shares)</strong></p>
+<ul>
+<li><strong>Total Investment Cost:</strong> $10,000 + $15,000 = $25,000</li>
+<li><strong>Total Number of Shares:</strong> 50 + 100 = 150 shares</li>
+<li><strong>Average Share Price:</strong> $25,000 / 150 = <strong>$166.67 per share</strong></li>
+</ul>
+<p>This example demonstrates how buying more shares at a lower price can reduce your overall average cost. Our <strong>stock average calculator</strong> performs these calculations automatically, saving you time and ensuring precision.</p>
+
+ 
+
+        <h3>How to Calculate Average of Average in Excel</h3>
+        <p>
+            Now, this one can be tricky. Be careful here. If you just have a list of your <em>average prices</em> for different stocks and you use the <code>=AVERAGE()</code> function in Excel, you will get a wrong number that means nothing. This is because it doesn't consider how much money you have in each stock.
+        </p>
+        <p>
+            The right way to do this in Excel is to calculate a <strong>weighted average</strong>. Here's a simple way to set it up:
+        </p>
+        <ul>
+            <li><strong>Column A:</strong> Stock Ticker (e.g., XYZ)</li>
+            <li><strong>Column B:</strong> Number of Shares You Own (e.g., 250)</li>
+            <li><strong>Column C:</strong> Your Average Price for that stock (e.g., $44)</li>
+            <li><strong>Column D:</strong> Total Cost (This is a formula: <code>=B2*C2</code>)</li>
+        </ul>
+        <p>Do this for all your stocks. At the bottom of your sheet:</p>
+        <ol>
+            <li>Get the sum of <strong>Column D</strong> (your total investment cost across all stocks).</li>
+            <li>Get the sum of <strong>Column B</strong> (your total number of shares across all stocks).</li>
+            <li>
+                <strong>Do not average the averages in Column C.</strong> Instead, divide the total of Column D by the total <em>value</em> of your portfolio to find the average of each position. The most useful "average" for a whole portfolio is usually your cost basis, which is the sum of Column D.
+            </li>
+        </ol>
+        <p>
+            Simply averaging your average prices is a common mistake that can give you a false sense of your portfolio's performance. Always calculate it based on the total money invested.
+        </p>
+
+          <hr>
+          <div style="text-align:center;">
+            <img src="images/Stocksaveragecalculator.png" alt="Stocksaveragecalculator" style="max-width:100%; border-radius:8px;">
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <img src="images/topup.svg" alt="top" onclick="topFunction()" id="topbtn" style="width:28px; height:auto; filter:invert(1) brightness(1) saturate(0.8); position:relative; top:-6px;">
+  <div class="footer-container" style="max-width:1100px; margin:auto; display:flex; flex-direction:column; gap:8px;">
+    <div class="copyright">&copy; <script>document.write(new Date().getFullYear())</script> www.stocksaveragecalculator.com</div>
+    <div class="langs" style="text-align:center;">
+stock average calculator|average calculator|weighted average calculator|stock profit calculator|abg calculator|average rate of change calculator<br>
+point buy calculator|penny stock calculator|price per unit calculator|share profit calculator
+    
+    </div>
+    <div style="text-align:right;"><a href="About.html" style="color:#fff; text-decoration:underline;">About us</a></div>
+  </div>
+</footer>
+
+<!-- Floating back to top button -->
+<button id="top" title="Back to top" onclick="topFunction()">↑</button>
+
+<!-- Original JS (embedded exactly as provided) -->
+<script>
+let mybutton = document.getElementById("top");
+window.onscroll = function() {
+    scrollFunction();
+};
+
+function scrollFunction() {
+    if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        mybutton.style.display = "block";
+    } else {
+        mybutton.style.display = "none";
+    }
+}
+
+function topFunction() {
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+}
+
+// Close functions for each stock input section
+function close3() { closeStock(3); }
+function close4() { closeStock(4); }
+function close5() { closeStock(5); }
+function close6() { closeStock(6); }
+function close7() { closeStock(7); }
+function close8() { closeStock(8); }
+function close9() { closeStock(9); }
+function close10() { closeStock(10); }
+
+function closeStock(num) {
+    // Clear inputs
+    document.getElementById(`number${num}`).value = "";
+    document.getElementById(`price${num}`).value = "";
+    // Hide the stock section
+    document.getElementById(`stock${num}`).style.display = "none";
+    // Show the add new button
+    document.getElementById("addnew").style.display = "block";
+    // Recalculate
+    calculate();
+}
+
+function addmore() {
+    // Find the first hidden stock section
+    for (let i = 3; i <= 10; i++) {
+        let stockSection = document.getElementById(`stock${i}`);
+        if (stockSection && stockSection.style.display === "none") {
+            stockSection.style.display = "block";
+            // Hide "Add More" button if we've reached stock10
+            if (i === 10) {
+                document.getElementById("addnew").style.display = "none";
+            }
+            break;
+        }
+    }
+}
+
+function calculate() {
+    // Get all the input values
+    let shares = [];
+    let prices = [];
+    let totalShares = 0;
+    let totalAmount = 0;
+    
+    // Clear previous results
+    document.getElementById('transactionBody').innerHTML = '';
+    
+    // Collect data from inputs
+    for (let i = 1; i <= 10; i++) {
+        let shareInput = document.getElementById('number' + i);
+        let priceInput = document.getElementById('price' + i);
+        
+        if (shareInput && priceInput && 
+            shareInput.value && priceInput.value && 
+            !isNaN(shareInput.value) && !isNaN(priceInput.value)) {
+            
+            shares.push(parseFloat(shareInput.value));
+            prices.push(parseFloat(priceInput.value));
+        }
+    }
+    
+    // Only proceed if we have data
+    if (shares.length > 0) {
+        // Calculate totals and populate table
+        let tbody = document.getElementById('transactionBody');
+        for (let i = 0; i < shares.length; i++) {
+            totalShares += shares[i];
+            let amount = shares[i] * prices[i];
+            totalAmount += amount;
+            
+            let row = tbody.insertRow();
+            row.insertCell(0).textContent = (i + 1);
+            row.insertCell(1).textContent = shares[i].toLocaleString();
+            row.insertCell(2).textContent = prices[i].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            row.insertCell(3).textContent = amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        
+        // Calculate average price
+        let averagePrice = totalAmount / totalShares;
+        
+        // Update result cards
+        document.getElementById('totalShares').textContent = totalShares.toLocaleString();
+        document.getElementById('avgPrice').textContent = averagePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('totalInvestment').textContent = totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        // Calculate profit/loss if current price is provided
+        let currentPrice = document.getElementById('currentPrice').value;
+        if (currentPrice && !isNaN(currentPrice)) {
+            currentPrice = parseFloat(currentPrice);
+            let profitLoss = (currentPrice - averagePrice) * totalShares;
+            let profitLossPercentage = (profitLoss / totalAmount) * 100;
+            
+            // Update profit/loss displays
+            document.getElementById('profitLoss').textContent = 
+                (profitLoss >= 0 ? '+' : '') + 
+                profitLoss.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            document.getElementById('profitLossPercentage').textContent = 
+                (profitLossPercentage >= 0 ? '+' : '') + 
+                profitLossPercentage.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '%';
+            
+            // Apply color classes
+            document.getElementById('profitLoss').className = 'resultdata ' + (profitLoss >= 0 ? 'positive' : 'negative');
+            document.getElementById('profitLossPercentage').className = 'resultdata ' + (profitLoss >= 0 ? 'positive' : 'negative');
+            
+            // Show profit/loss cards
+            document.getElementById('profitLossCard').style.display = 'block';
+            document.getElementById('profitLossPercentageCard').style.display = 'block';
+        } else {
+            // Hide profit/loss cards
+            document.getElementById('profitLossCard').style.display = 'none';
+            document.getElementById('profitLossPercentageCard').style.display = 'none';
+        }
+        
+        // Show results sections
+        document.getElementById('transactionSummary').style.display = 'block';
+        document.querySelector('.transaction-container').style.display = 'block';
+        document.querySelector('.chart-container').style.display = 'block';
+        
+        // Update chart
+        updateChart(shares, prices);
+    }
+}
+
+function updateChart(shares, prices) {
+    const ctx = document.getElementById('purchaseChart').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.purchaseChart instanceof Chart) {
+        window.purchaseChart.destroy();
+    }
+    
+    // Prepare data for chart
+    const labels = Array.from({length: shares.length}, (_, i) => `Purchase ${i + 1}`);
+    
+    // Create new chart
+    window.purchaseChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Number of Shares',
+                data: shares,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Purchase Price',
+                data: prices,
+                type: 'line',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                fill: false,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Number of Shares'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Price'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            }
+        }
+    });
+}
+
+function clearAll() {
+    // Clear all inputs
+    for (let i = 1; i <= 10; i++) {
+        let numberInput = document.getElementById(`number${i}`);
+        let priceInput = document.getElementById(`price${i}`);
+        if (numberInput) numberInput.value = "";
+        if (priceInput) priceInput.value = "";
+    }
+    document.getElementById("currentPrice").value = "";
+    
+    // Reset stock sections visibility
+    for (let i = 3; i <= 10; i++) {
+        let stockSection = document.getElementById(`stock${i}`);
+        if (stockSection) stockSection.style.display = "none";
+    }
+    document.getElementById("addnew").style.display = "block";
+    
+    // Clear results
+    document.getElementById('transactionBody').innerHTML = '';
+    document.getElementById('totalShares').textContent = '#';
+    document.getElementById('avgPrice').textContent = '#';
+    document.getElementById('totalInvestment').textContent = '#';
+    document.getElementById('profitLoss').textContent = '#';
+    document.getElementById('profitLossPercentage').textContent = '#';
+    
+    // Hide profit/loss cards
+    document.getElementById('profitLossCard').style.display = 'none';
+    document.getElementById('profitLossPercentageCard').style.display = 'none';
+    
+    // Clear chart
+    if (window.purchaseChart) {
+        window.purchaseChart.destroy();
+    }
+}
+
+// Print summary function
+function printSummary() {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    
+    // Get the transaction table
+    const table = document.querySelector('.transaction-table').cloneNode(true);
+    
+    // Create print content
+    const printContent = `
+        <html>
+        <head>
+            <title>Transaction Summary</title>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid black; padding: 8px; text-align: center; }
+                th { background-color: #f2f2f2; }
+                h2 { text-align: center; }
+            </style>
+        </head>
+        <body>
+            <h2>Transaction Summary</h2>
+            ${table.outerHTML}
+        </body>
+        </html>
+    `;
+    
+    // Write to the new window
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Print after content is loaded
+    printWindow.onload = function() {
+        printWindow.print();
+        printWindow.close();
+    };
+}
+
+// Mobile menu function
+function menuicon() {
+    const menu = document.getElementById('menu');
+    const menuIcon = document.getElementById('menuIcon');
+    
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+        menuIcon.classList.remove('active');
+    } else {
+        menu.style.display = 'block';
+        menuIcon.classList.add('active');
+    }
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('menu');
+    const menuIcon = document.getElementById('menuIcon');
+    
+    if (menu && menuIcon && menu.style.display === 'block') {
+        if (!menu.contains(event.target) && !menuIcon.contains(event.target)) {
+            menu.style.display = 'none';
+            menuIcon.classList.remove('active');
+        }
+    }
+});
+
+// Initialize when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Enter key listener for price inputs
+    for (let i = 1; i <= 10; i++) {
+        let priceInput = document.getElementById(`price${i}`);
+        if (priceInput) {
+            priceInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    calculate();
+                }
+            });
+        }
+    }
+    
+    // Auto-calculate on current price change
+    let currentPriceInput = document.getElementById('currentPrice');
+    if (currentPriceInput) {
+        currentPriceInput.addEventListener('input', function() {
+            if (document.getElementById('totalShares').textContent !== '#') {
+                calculate();
+            }
+        });
+    }
+    
+    // Initialize stock sections
+    for (let i = 3; i <= 10; i++) {
+        let stockSection = document.getElementById(`stock${i}`);
+        if (stockSection) {
+            stockSection.style.display = "none";
+        }
+    }
+});
+
+window.addEventListener('resize', function() {
+    if (window.purchaseChart) {
+        window.purchaseChart.resize();
+    }
+});
+</script>
+
+</body>
+</html>
