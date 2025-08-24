@@ -224,7 +224,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/stockaveragecalculator/service-worker.js');
+        navigator.serviceWorker.register('./stockaveragecalculator/service-worker.js');
       });
     }
     // Initialize deferredPrompt for use later to show browser install prompt.
@@ -265,6 +265,7 @@
 </body>
 
 </html>
+
 
 
 
